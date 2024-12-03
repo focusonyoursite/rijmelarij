@@ -186,50 +186,81 @@
             height: 100%;
             border: none;
         }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .secondary-button {
+            background-color: #4a90e2;
+        }
+        .secondary-button:hover {
+            background-color: #357abd;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Sinterklaas Gedichtengenerator</h1>
         
-        <div class="form-group">
-            <label for="name">Voor wie is het gedicht?</label>
-            <input type="text" id="name" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="gender">Voor wie is het gedicht?</label>
-            <select id="gender" required>
-                <option value="">Kies...</option>
-                <option value="jongen">Jongen</option>
-                <option value="meisje">Meisje</option>
-                <option value="man">Man</option>
-                <option value="vrouw">Vrouw</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="gift">Wat is het cadeau?</label>
-            <input type="text" id="gift" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="hobbies">Wat zijn de hobby's?</label>
-            <textarea id="hobbies" rows="3" required></textarea>
-        </div>
-        
-        <div class="form-group">
-            <label>
-                <input type="checkbox" id="is_surprise">
-                Is het een surprise?
-            </label>
-        </div>
-        
-        <div class="button-container">
-            <button onclick="generatePoem()">Genereer Nieuw Gedicht</button>
-            <button class="save-button" onclick="savePoem()" id="save-button" style="display: none;">Bewaar Gedicht</button>
-            <button class="download-button" onclick="downloadPDF()" id="download-button" style="display: none;">Download PDF</button>
-        </div>
+        <form id="poem-form" onsubmit="generatePoem(); return false;">
+            <div class="form-group">
+                <label for="name">Voor wie is het gedicht?</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="gender">Geslacht</label>
+                <select id="gender" name="gender" required>
+                    <option value="">Kies...</option>
+                    <option value="man">Man</option>
+                    <option value="vrouw">Vrouw</option>
+                    <option value="jongen">Jongen</option>
+                    <option value="meisje">Meisje</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="theme">Thema</label>
+                <select id="theme" name="theme" required>
+                    <option value="sinterklaas">Sinterklaas</option>
+                    <option value="verjaardag">Verjaardag</option>
+                    <option value="afscheid">Afscheid</option>
+                    <option value="bedankt">Bedankt</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="difficulty">Moeilijkheidsgraad</label>
+                <select id="difficulty" name="difficulty" required>
+                    <option value="easy">Makkelijk (voor kinderen)</option>
+                    <option value="medium">Gemiddeld</option>
+                    <option value="hard">Moeilijk (voor volwassenen)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="gift">Cadeau</label>
+                <input type="text" id="gift" name="gift" required>
+            </div>
+
+            <div class="form-group">
+                <label for="hobbies">Hobby's of interesses</label>
+                <textarea id="hobbies" name="hobbies" rows="3" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="is_surprise" name="is_surprise">
+                    Is het een surprise?
+                </label>
+            </div>
+
+            <div class="button-group">
+                <button type="submit">Genereer Gedicht</button>
+                <button type="button" onclick="showExample()" class="secondary-button">Bekijk Voorbeeld</button>
+            </div>
+        </form>
         
         <div class="loading" id="loading">
             Even geduld, Sinterklaas schrijft een gedicht...
@@ -269,6 +300,11 @@
                 <iframe id="pdf-preview"></iframe>
             </div>
         </div>
+        
+        <div class="button-container">
+            <button class="save-button" onclick="savePoem()" id="save-button" style="display: none;">Bewaar Gedicht</button>
+            <button class="download-button" onclick="downloadPDF()" id="download-button" style="display: none;">Download PDF</button>
+        </div>
     </div>
 
     <script>
@@ -295,6 +331,8 @@
             currentContext = {
                 name: document.getElementById('name').value,
                 gender: document.getElementById('gender').value,
+                theme: document.getElementById('theme').value,
+                difficulty: document.getElementById('difficulty').value,
                 gift: document.getElementById('gift').value,
                 hobbies: document.getElementById('hobbies').value,
                 is_surprise: document.getElementById('is_surprise').checked
@@ -577,6 +615,37 @@
                     console.error('Kon preview niet genereren:', e);
                 }
             }, 500); // Wait 500ms after last change before updating
+        }
+        
+        // Nieuwe functie voor het tonen van een voorbeeldgedicht
+        function showExample() {
+            const examples = {
+                sinterklaas: [
+                    "Lieve Thomas, wat een jaar,",
+                    "Met je nieuwe gitaar daar.",
+                    "Elke dag weer nieuwe liedjes,",
+                    "Zelfs de Pieten worden blij, yes!"
+                ],
+                verjaardag: [
+                    "Sarah wordt vandaag al acht,",
+                    "Dat had niemand echt verwacht!",
+                    "Met je nieuwe tekenspullen,",
+                    "Ga je alle muren vullen!"
+                ],
+                afscheid: [
+                    "Beste Jan, je gaat nu weg,",
+                    "Dat vinden wij toch wel wat pech.",
+                    "Maar we wensen je het beste,",
+                    "Want jij bent echt één der beste!"
+                ]
+            };
+            
+            const theme = document.getElementById('theme').value;
+            const lines = examples[theme] || examples.sinterklaas;
+            displayPoem(lines);
+            
+            // Scroll naar het gedicht
+            document.getElementById('poem-container').scrollIntoView({ behavior: 'smooth' });
         }
         
         // Load fonts when page loads

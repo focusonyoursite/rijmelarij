@@ -51,12 +51,17 @@ class PoemGenerator:
                 break
             print("Antwoord alstublieft met 'ja' of 'nee'")
         
+        theme = input("Kies een thema (sinterklaas, verjaardag, afscheid, bedankt): ").lower()
+        difficulty = input("Kies een moeilijkheidsgraad (easy, medium, hard): ").lower()
+        
         return {
             "name": name,
             "gender": gender,
             "gift": gift,
             "hobbies": hobbies,
-            "is_surprise": is_surprise == 'ja'
+            "is_surprise": is_surprise == 'ja',
+            "theme": theme,
+            "difficulty": difficulty
         }
 
     def call_openai_with_retry(self, messages, temperature=0.7, max_tokens=500, max_retries=3):
@@ -269,12 +274,69 @@ class PoemGenerator:
     def generate_poem(self, context):
         """Genereer een Sinterklaasgedicht met context"""
         is_child = context['gender'] in ['jongen', 'meisje']
+        theme = context.get('theme', 'sinterklaas')
+        difficulty = context.get('difficulty', 'medium')
         
         try:
+            # Bepaal de stijl op basis van moeilijkheidsgraad
+            style_guide = {
+                'easy': """
+                    - Gebruik eenvoudige woorden en korte zinnen
+                    - Vermijd moeilijke constructies
+                    - Maak het speels en vrolijk
+                    - Gebruik veel concrete voorbeelden
+                    - Houd het tempo vlot
+                """,
+                'medium': """
+                    - Gebruik gevarieerd taalgebruik
+                    - Mix eenvoudige en complexere zinnen
+                    - Voeg wat woordgrapjes toe
+                    - Gebruik beeldspraak waar passend
+                    - Zorg voor een goede afwisseling
+                """,
+                'hard': """
+                    - Gebruik rijke taal en complexere zinstructuren
+                    - Voeg subtiele humor en woordspelingen toe
+                    - Gebruik creatieve beeldspraak
+                    - Maak verrassende verbanden
+                    - Voeg diepere lagen toe aan het gedicht
+                """
+            }[difficulty]
+
+            # Bepaal thema-specifieke elementen
+            theme_elements = {
+                'sinterklaas': """
+                    - Verwijs naar Sinterklaas en zijn Pieten
+                    - Gebruik traditionele Sinterklaas-elementen
+                    - Verwijs naar pakjesavond en surprises
+                """,
+                'verjaardag': """
+                    - Focus op de feestelijke gelegenheid
+                    - Verwijs naar leeftijd en groei
+                    - Gebruik vrolijke, feestelijke taal
+                """,
+                'afscheid': """
+                    - Toon waardering voor de persoon
+                    - Verwijs naar gedeelde herinneringen
+                    - Eindig met goede wensen voor de toekomst
+                """,
+                'bedankt': """
+                    - Uit oprechte dankbaarheid
+                    - Verwijs naar specifieke acties of momenten
+                    - Maak het persoonlijk en warm
+                """
+            }[theme]
+
             system_message = {
                 "role": "system",
-                "content": """Je bent een Nederlandse dichter, gespecialiseerd in het schrijven van Sinterklaasgedichten.
+                "content": f"""Je bent een Nederlandse dichter, gespecialiseerd in het schrijven van {theme}-gedichten.
                 Gebruik ALLEEN natuurlijk, idiomatisch Nederlands - geen vertalingen uit het Engels.
+                
+                Stijlniveau voor dit gedicht:
+                {style_guide}
+                
+                Thema-specifieke elementen:
+                {theme_elements}
                 
                 Belangrijke taalrichtlijnen:
                 - Gebruik Nederlandse zinsconstructies (NIET: 'Hij is aan het spelen games' maar 'Hij speelt graag spelletjes')
@@ -285,37 +347,15 @@ class PoemGenerator:
                 
                 Stijlrichtlijnen:
                 - Maak het persoonlijk en origineel
-                - Gebruik humor die past bij Nederlandse Sinterklaasgedichten
-                - Vermijd clichés zoals 'Sinterklaas zat te denken, wat hij X zou schenken'
+                - Gebruik humor die past bij het thema en niveau
+                - Vermijd clichés
                 - Zorg voor een originele, pakkende opening die past bij de context
                 - Gebruik rijm (bij voorkeur gepaard rijm: aabb)"""
             }
 
-            # Voeg voorbeelden toe van goede Nederlandse stijl
-            examples = """Voorbeelden van goede Nederlandse stijl:
-
-            ✅ Goede Nederlandse constructies:
-            - "Als jij je fiets door weer en wind bestuurt,"
-            - "Met jouw gitaar maak jij de mooiste klanken,"
-            - "Terwijl de Pieten door de schoorsteen gleden,"
-            
-            ❌ Vermijd Engels-achtige constructies:
-            - "Jij bent zo goed in spelen games" (Engels)
-            → "Je speelt zo graag computerspellen" (Nederlands)
-            
-            - "De Sint was watching jou dit jaar" (Engels)
-            → "De Sint hield jou dit jaar goed in de gaten" (Nederlands)
-            
-            Gebruik deze typisch Nederlandse wendingen:
-            - "Zoals je weet..."
-            - "Wat niemand nog verteld is..."
-            - "Het schijnt dat..."
-            - "Men zegt dat..."
-            - "Wie had dat nou gedacht...""""
-
             user_message = {
                 "role": "user",
-                "content": f"""Schrijf een origineel Sinterklaasgedicht in natuurlijk Nederlands voor deze persoon:
+                "content": f"""Schrijf een origineel {theme}-gedicht in natuurlijk Nederlands voor deze persoon:
                 
                 Persoon:
                 - Naam: {context['name']}
@@ -324,8 +364,6 @@ class PoemGenerator:
                 - Hobby's: {context['hobbies']}
                 - Surprise: {'ja' if context['is_surprise'] else 'nee'}
                 
-                {examples}
-                
                 Het gedicht moet:
                 - Persoonlijk zijn en de context gebruiken
                 - 6-8 regels lang zijn
@@ -333,19 +371,21 @@ class PoemGenerator:
                 - Natuurlijk Nederlands gebruiken
                 - Een verrassende opening hebben
                 - Humor bevatten die past bij een {'kind' if is_child else 'volwassene'}
+                - Passen bij het gekozen thema: {theme}
+                - Qua moeilijkheid passen bij niveau: {difficulty}
                 
                 Begin direct met het gedicht, zonder inleiding."""
             }
-            
+
             response = self.call_openai_with_retry(
                 messages=[system_message, user_message],
                 temperature=0.8,
                 max_tokens=200
             )
-
-            poem = response.choices[0].message.content.strip().split('\n')
-            return [line.strip() for line in poem if line.strip()]
-
+            
+            lines = [line.strip() for line in response.split('\n') if line.strip()]
+            return lines[:8]  # Maximaal 8 regels
+            
         except Exception as e:
             return self.generate_fallback_poem(context)
 
