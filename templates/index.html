@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sinterklaas Gedichtengenerator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #c41e3a;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #a01830;
+        }
+        .poem-line {
+            margin: 10px 0;
+            line-height: 1.6;
+            padding: 5px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .line-content {
+            flex-grow: 1;
+        }
+        .word {
+            display: inline-block;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .word:hover {
+            background-color: #fff0f0;
+        }
+        .regenerate-btn {
+            padding: 4px 8px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .regenerate-btn:hover {
+            background-color: #e0e0e0;
+        }
+        .word-dropdown {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .word-option {
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+        .word-option:hover {
+            background-color: #f0f0f0;
+        }
+        .regenerating {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        #poem-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #fff9f9;
+            border-radius: 8px;
+            border: 1px solid #ffdddd;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+            display: none;
+        }
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .save-button, .download-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 0 5px;
+        }
+        .save-button {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .download-button {
+            background-color: #2196F3;
+            color: white;
+            display: none;
+        }
+        .save-button:hover {
+            background-color: #45a049;
+        }
+        .download-button:hover {
+            background-color: #1976D2;
+        }
+        .formatting-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 800px;
+            display: none;
+        }
+        .formatting-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .control-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .control-group select,
+        .control-group input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .preview-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .preview-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sinterklaas Gedichtengenerator</h1>
+        
+        <div class="form-group">
+            <label for="name">Voor wie is het gedicht?</label>
+            <input type="text" id="name" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="gender">Voor wie is het gedicht?</label>
+            <select id="gender" required>
+                <option value="">Kies...</option>
+                <option value="jongen">Jongen</option>
+                <option value="meisje">Meisje</option>
+                <option value="man">Man</option>
+                <option value="vrouw">Vrouw</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="gift">Wat is het cadeau?</label>
+            <input type="text" id="gift" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="hobbies">Wat zijn de hobby's?</label>
+            <textarea id="hobbies" rows="3" required></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="is_surprise">
+                Is het een surprise?
+            </label>
+        </div>
+        
+        <div class="button-container">
+            <button onclick="generatePoem()">Genereer Nieuw Gedicht</button>
+            <button class="save-button" onclick="savePoem()" id="save-button" style="display: none;">Bewaar Gedicht</button>
+            <button class="download-button" onclick="downloadPDF()" id="download-button" style="display: none;">Download PDF</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            Even geduld, Sinterklaas schrijft een gedicht...
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div id="poem-container"></div>
+        
+        <div class="formatting-panel" id="formatting-panel">
+            <h3>PDF Opmaak</h3>
+            <div class="formatting-controls">
+                <div class="control-group">
+                    <label for="font-select">Lettertype:</label>
+                    <select id="font-select" onchange="updatePreview()">
+                        <!-- Wordt dynamisch gevuld -->
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="title-size">Titel Grootte:</label>
+                    <input type="number" id="title-size" value="16" min="12" max="24" step="1" onchange="updatePreview()">
+                </div>
+                <div class="control-group">
+                    <label for="poem-size">Gedicht Grootte:</label>
+                    <input type="number" id="poem-size" value="12" min="8" max="18" step="1" onchange="updatePreview()">
+                </div>
+                <div class="control-group">
+                    <label for="line-spacing">Regelafstand:</label>
+                    <input type="number" id="line-spacing" value="1.5" min="1" max="3" step="0.1" onchange="updatePreview()">
+                </div>
+                <div class="control-group">
+                    <label for="margin">Marge (mm):</label>
+                    <input type="number" id="margin" value="20" min="10" max="30" step="1" onchange="updatePreview()">
+                </div>
+            </div>
+            <div class="preview-container">
+                <iframe id="pdf-preview"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentContext = null;
+        let currentPDFPath = null;
+        let currentPreviewPath = null;
+        let previewDebounceTimer = null;
+        
+        async function generatePoem() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const poemContainer = document.getElementById('poem-container');
+            const saveButton = document.getElementById('save-button');
+            const downloadButton = document.getElementById('download-button');
+            const formattingPanel = document.getElementById('formatting-panel');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            poemContainer.innerHTML = '';
+            saveButton.style.display = 'none';
+            downloadButton.style.display = 'none';
+            formattingPanel.style.display = 'none';
+            
+            currentContext = {
+                name: document.getElementById('name').value,
+                gender: document.getElementById('gender').value,
+                gift: document.getElementById('gift').value,
+                hobbies: document.getElementById('hobbies').value,
+                is_surprise: document.getElementById('is_surprise').checked
+            };
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentContext)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    await displayPoem(data.poem);
+                    saveButton.style.display = 'block';
+                    // Show formatting panel and generate initial preview
+                    document.getElementById('formatting-panel').style.display = 'block';
+                    updatePreview();
+                } else {
+                    error.textContent = data.error;
+                    error.style.display = 'block';
+                }
+            } catch (e) {
+                error.textContent = 'Er is een fout opgetreden. Probeer het later opnieuw.';
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function regenerateLine(lineDiv, lineIndex) {
+            if (!currentContext) return;
+            
+            const contentDiv = lineDiv.querySelector('.line-content');
+            const words = contentDiv.textContent.split(' ').length;
+            lineDiv.classList.add('regenerating');
+            
+            const previousLineDiv = lineDiv.previousElementSibling;
+            const previousLine = previousLineDiv ? 
+                previousLineDiv.querySelector('.line-content').textContent : '';
+            
+            try {
+                const response = await fetch('/regenerate_line', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        lineIndex,
+                        previousLine,
+                        context: currentContext,
+                        targetWords: words
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayLineContent(contentDiv, data.new_line);
+                }
+            } catch (e) {
+                console.error('Fout bij het regenereren van de regel:', e);
+            } finally {
+                lineDiv.classList.remove('regenerating');
+            }
+        }
+
+        function displayLineContent(container, text) {
+            container.innerHTML = '';
+            const words = text.split(' ');
+            
+            words.forEach((word, index) => {
+                const span = document.createElement('span');
+                span.className = 'word';
+                span.textContent = word;
+                span.onclick = (e) => showWordOptions(e, span, word);
+                
+                container.appendChild(span);
+                if (index < words.length - 1) {
+                    container.appendChild(document.createTextNode(' '));
+                }
+            });
+        }
+
+        async function showWordOptions(event, wordSpan, word) {
+            event.stopPropagation();
+            
+            // Verwijder bestaande dropdowns
+            const existingDropdown = document.querySelector('.word-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+            
+            try {
+                const response = await fetch('/get_alternative_words', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        word,
+                        context: wordSpan.closest('.line-content').textContent
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.alternatives.length > 0) {
+                    const dropdown = document.createElement('div');
+                    dropdown.className = 'word-dropdown';
+                    
+                    data.alternatives.forEach(alt => {
+                        const option = document.createElement('div');
+                        option.className = 'word-option';
+                        option.textContent = alt;
+                        option.onclick = () => {
+                            wordSpan.textContent = alt;
+                            dropdown.remove();
+                        };
+                        dropdown.appendChild(option);
+                    });
+                    
+                    // Positie dropdown onder het woord
+                    const rect = wordSpan.getBoundingClientRect();
+                    dropdown.style.left = `${rect.left}px`;
+                    dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+                    
+                    document.body.appendChild(dropdown);
+                    
+                    // Sluit dropdown bij klik buiten
+                    document.addEventListener('click', function closeDropdown(e) {
+                        if (!dropdown.contains(e.target) && e.target !== wordSpan) {
+                            dropdown.remove();
+                            document.removeEventListener('click', closeDropdown);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Fout bij ophalen alternatieve woorden:', e);
+            }
+        }
+
+        async function displayPoem(lines) {
+            const poemContainer = document.getElementById('poem-container');
+            poemContainer.innerHTML = '<h2>Je Sinterklaasgedicht:</h2>';
+            
+            for (let i = 0; i < lines.length; i++) {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'poem-line';
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'line-content';
+                displayLineContent(contentDiv, lines[i]);
+                
+                const regenerateBtn = document.createElement('button');
+                regenerateBtn.className = 'regenerate-btn';
+                regenerateBtn.textContent = '↻';
+                regenerateBtn.title = 'Regel opnieuw genereren';
+                regenerateBtn.onclick = () => regenerateLine(lineDiv, i);
+                
+                lineDiv.appendChild(contentDiv);
+                lineDiv.appendChild(regenerateBtn);
+                poemContainer.appendChild(lineDiv);
+            }
+        }
+
+        async function savePoem() {
+            const poemContainer = document.getElementById('poem-container');
+            const lines = Array.from(poemContainer.getElementsByClassName('poem-line'))
+                .map(lineDiv => lineDiv.querySelector('.line-content').textContent.trim());
+            
+            const name = document.getElementById('name').value.trim();
+            if (!name) {
+                alert('Vul eerst een naam in voordat je het gedicht opslaat.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/save_poem', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        lines: lines,
+                        name: name,
+                        formatting: getFormatting()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Gedicht is succesvol bewaard!');
+                    currentPDFPath = data.pdf_path;
+                    document.getElementById('download-button').style.display = 'inline-block';
+                } else {
+                    alert(data.error || 'Er is een fout opgetreden bij het bewaren van het gedicht.');
+                }
+            } catch (e) {
+                alert('Er is een fout opgetreden bij het bewaren van het gedicht.');
+            }
+        }
+
+        function downloadPDF() {
+            if (currentPDFPath) {
+                window.location.href = `/download_pdf/${currentPDFPath}`;
+            }
+        }
+        
+        async function loadFonts() {
+            try {
+                const response = await fetch('/get_fonts');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const fontSelect = document.getElementById('font-select');
+                    fontSelect.innerHTML = '';
+                    
+                    Object.entries(data.fonts).forEach(([id, name]) => {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = name;
+                        fontSelect.appendChild(option);
+                    });
+                }
+            } catch (e) {
+                console.error('Kon lettertypen niet laden:', e);
+            }
+        }
+        
+        function getFormatting() {
+            return {
+                font: document.getElementById('font-select').value,
+                title_size: document.getElementById('title-size').value,
+                poem_size: document.getElementById('poem-size').value,
+                line_spacing: document.getElementById('line-spacing').value,
+                margin: document.getElementById('margin').value
+            };
+        }
+        
+        async function updatePreview() {
+            // Clear existing timer
+            if (previewDebounceTimer) {
+                clearTimeout(previewDebounceTimer);
+            }
+            
+            // Set new timer to debounce preview updates
+            previewDebounceTimer = setTimeout(async () => {
+                const poemContainer = document.getElementById('poem-container');
+                const lines = Array.from(poemContainer.getElementsByClassName('poem-line'))
+                    .map(lineDiv => lineDiv.querySelector('.line-content').textContent.trim());
+                
+                if (lines.length === 0) return;
+                
+                try {
+                    const response = await fetch('/preview_pdf', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            lines: lines,
+                            formatting: getFormatting()
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        currentPreviewPath = data.preview_path;
+                        const previewFrame = document.getElementById('pdf-preview');
+                        previewFrame.src = `/preview/${currentPreviewPath}`;
+                    }
+                } catch (e) {
+                    console.error('Kon preview niet genereren:', e);
+                }
+            }, 500); // Wait 500ms after last change before updating
+        }
+        
+        // Load fonts when page loads
+        document.addEventListener('DOMContentLoaded', loadFonts);
+    </script>
+</body>
+</html>
