@@ -268,7 +268,20 @@
         
         <div class="error" id="error"></div>
         
-        <div id="poem-container"></div>
+        <div id="poem-container" class="poem-container">
+            <!-- Poem lines will be added here -->
+        </div>
+        
+        <div class="button-group">
+            <button onclick="savePoem()" type="button">Sla gedicht op</button>
+            <button onclick="downloadPDF()" type="button">Download als PDF</button>
+            <button onclick="showExample()" type="button">Toon voorbeeld</button>
+            <button onclick="previewPDF()" type="button">Bekijk PDF voorbeeld</button>
+        </div>
+        
+        <div id="pdf-preview" class="pdf-preview" style="display: none;">
+            <iframe id="pdf-iframe" style="width: 100%; height: 500px; border: none;"></iframe>
+        </div>
         
         <div class="formatting-panel" id="formatting-panel">
             <h3>PDF Opmaak</h3>
@@ -650,6 +663,118 @@
         
         // Load fonts when page loads
         document.addEventListener('DOMContentLoaded', loadFonts);
+        
+        function displayLineContent(container, text) {
+            container.innerHTML = '';
+            const words = text.split(' ');
+            words.forEach((word, index) => {
+                const wordSpan = document.createElement('span');
+                wordSpan.className = 'word';
+                wordSpan.textContent = word;
+                wordSpan.onclick = (event) => showWordOptions(event, wordSpan, word);
+                container.appendChild(wordSpan);
+                if (index < words.length - 1) {
+                    container.appendChild(document.createTextNode(' '));
+                }
+            });
+        }
+
+        function regenerateLine(lineDiv, lineIndex) {
+            const currentLines = Array.from(document.querySelectorAll('.poem-line')).map(div => 
+                div.querySelector('.line-content').textContent.trim()
+            );
+            
+            lineDiv.classList.add('regenerating');
+            
+            fetch('/regenerate_line', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    line_index: lineIndex,
+                    current_lines: currentLines
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const lineContent = lineDiv.querySelector('.line-content');
+                displayLineContent(lineContent, data.new_line);
+                lineDiv.classList.remove('regenerating');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                lineDiv.classList.remove('regenerating');
+            });
+        }
+
+        function showWordOptions(event, wordSpan, word) {
+            // Remove any existing dropdowns
+            const existingDropdown = document.querySelector('.word-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+
+            fetch('/get_rhyming_words', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ word: word })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const dropdown = document.createElement('div');
+                dropdown.className = 'word-dropdown';
+                
+                // Position the dropdown below the word
+                const rect = wordSpan.getBoundingClientRect();
+                dropdown.style.left = `${rect.left}px`;
+                dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+                
+                // Add rhyming words to dropdown
+                data.rhyming_words.forEach(rhymingWord => {
+                    const option = document.createElement('div');
+                    option.className = 'word-option';
+                    option.textContent = rhymingWord;
+                    option.onclick = () => {
+                        wordSpan.textContent = rhymingWord;
+                        dropdown.remove();
+                    };
+                    dropdown.appendChild(option);
+                });
+                
+                document.body.appendChild(dropdown);
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function closeDropdown(e) {
+                    if (!dropdown.contains(e.target) && e.target !== wordSpan) {
+                        dropdown.remove();
+                        document.removeEventListener('click', closeDropdown);
+                    }
+                });
+            });
+        }
+
+        function previewPDF() {
+            fetch('/preview_pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lines: Array.from(document.querySelectorAll('.poem-line'))
+                        .map(div => div.querySelector('.line-content').textContent.trim())
+                })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const pdfUrl = URL.createObjectURL(blob);
+                document.getElementById('pdf-iframe').src = pdfUrl;
+                document.getElementById('pdf-preview').style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+        }
     </script>
 </body>
 </html>

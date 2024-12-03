@@ -90,24 +90,80 @@ class PoemGenerator:
                     raise
 
     def suggest_rhyming_words(self, word):
-        """Suggereer rijmwoorden voor een gegeven woord"""
-        if not self.use_rhyme_check:
-            return []
+        """Get rhyming words for a given word using both dictionary and AI"""
+        rhyming_words = set()
+        
+        # First try the dictionary if available
+        if self.use_rhyme_check:
+            dict_words = self.rijmwoorden.get_rhyming_words(word.lower())
+            rhyming_words.update(dict_words)
+        
+        # Then use AI to generate more contextual rhyming words
+        prompt = f"""Geef 5 Nederlandse woorden die rijmen op '{word}'.
+        De woorden moeten:
+        1. Echt bestaande Nederlandse woorden zijn
+        2. Passen in een gedicht
+        3. Verschillend zijn van elkaar
+        4. Perfect rijmen (geen half-rijm)
+        
+        Geef alleen de woorden terug, gescheiden door komma's."""
         
         try:
-            rhyming_words = self.rijmwoorden.get_rhyming_words(word.lower())
-            if rhyming_words:
-                print(f"\nGevonden rijmwoorden voor '{word}':")
-                # Toon maximaal 5 rijmwoorden
-                shown_words = rhyming_words[:5]
-                for rhyme_word in shown_words:
-                    print(f"- {rhyme_word}")
-                if len(rhyming_words) > 5:
-                    print(f"... en nog {len(rhyming_words) - 5} andere rijmwoorden")
-            return rhyming_words
+            response = self.call_openai_with_retry([{
+                "role": "system",
+                "content": "Je bent een expert in Nederlandse rijmwoorden."
+            }, {
+                "role": "user",
+                "content": prompt
+            }], temperature=0.7, max_tokens=100)
+            
+            ai_words = [w.strip() for w in response.split(',')]
+            rhyming_words.update(ai_words)
+            
+            # Return a list of unique words, sorted alphabetically
+            return sorted(list(rhyming_words))
         except Exception as e:
-            print(f"Fout bij het zoeken naar rijmwoorden: {str(e)}")
-            return []
+            print(f"Error suggesting rhyming words: {str(e)}")
+            # If AI fails, return dictionary words if available, otherwise empty list
+            return sorted(list(rhyming_words)) if rhyming_words else []
+
+    def regenerate_line(self, line_index, current_lines):
+        """Generate a new line that fits with the context of surrounding lines"""
+        context = {
+            'previous_lines': current_lines[:line_index],
+            'next_lines': current_lines[line_index + 1:] if line_index + 1 < len(current_lines) else []
+        }
+        
+        prompt = f"""Genereer een nieuwe regel voor een Nederlands gedicht.
+        Deze regel moet passen bij de volgende context:
+        
+        Vorige regels:
+        {chr(10).join(context['previous_lines']) if context['previous_lines'] else '[Begin van gedicht]'}
+        
+        Volgende regels:
+        {chr(10).join(context['next_lines']) if context['next_lines'] else '[Einde van gedicht]'}
+        
+        De nieuwe regel moet:
+        1. Rijmen op de vorige of volgende regel (afhankelijk van de positie)
+        2. Passen bij het thema en de toon van het gedicht
+        3. Natuurlijk Nederlands zijn
+        4. Ongeveer dezelfde lengte hebben als de andere regels
+        
+        Geef alleen de nieuwe regel terug, zonder aanvullende tekst of uitleg."""
+        
+        try:
+            response = self.call_openai_with_retry([{
+                "role": "system",
+                "content": "Je bent een expert in het schrijven van Nederlandse gedichten."
+            }, {
+                "role": "user",
+                "content": prompt
+            }], temperature=0.8, max_tokens=100)
+            
+            return response.strip()
+        except Exception as e:
+            print(f"Error generating new line: {str(e)}")
+            raise
 
     def analyze_poem_rhyme(self, poem):
         """Analyseer het rijmschema van het gedicht"""

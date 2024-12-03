@@ -6,6 +6,7 @@ import datetime
 import re
 import json
 from werkzeug.middleware.proxy_fix import ProxyFix
+import io
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
@@ -121,6 +122,18 @@ def regenerate_line():
             'error': str(e)
         })
 
+@app.route('/regenerate_line_v2', methods=['POST'])
+def regenerate_line_v2():
+    data = request.get_json()
+    line_index = data.get('line_index')
+    current_lines = data.get('current_lines')
+    
+    try:
+        new_line = generator.regenerate_line(line_index, current_lines)
+        return jsonify({'new_line': new_line})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/get_alternative_words', methods=['POST'])
 def get_alternative_words():
     """Endpoint voor het ophalen van alternatieve woorden"""
@@ -153,6 +166,17 @@ def get_rhymes():
     word = request.json.get('word', '')
     rhyming_words = get_rhyming_words(word)
     return jsonify({'rhyming_words': rhyming_words})
+
+@app.route('/get_rhyming_words_v2', methods=['POST'])
+def get_rhyming_words_v2():
+    data = request.get_json()
+    word = data.get('word')
+    
+    try:
+        rhyming_words = generator.suggest_rhyming_words(word)
+        return jsonify({'rhyming_words': rhyming_words})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/save_poem', methods=['POST'])
 def save_poem():
@@ -269,6 +293,22 @@ def preview_pdf():
             'success': False,
             'error': str(e)
         })
+
+@app.route('/preview_pdf_v2', methods=['POST'])
+def preview_pdf_v2():
+    data = request.get_json()
+    lines = data.get('lines')
+    
+    try:
+        pdf_bytes = pdf_generator.generate_pdf(lines)
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=False,
+            download_name='preview.pdf'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/preview/<filename>')
 def get_preview(filename):
