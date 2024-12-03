@@ -222,16 +222,6 @@
             </div>
 
             <div class="form-group">
-                <label for="theme">Thema</label>
-                <select id="theme" name="theme" required>
-                    <option value="sinterklaas">Sinterklaas</option>
-                    <option value="verjaardag">Verjaardag</option>
-                    <option value="afscheid">Afscheid</option>
-                    <option value="bedankt">Bedankt</option>
-                </select>
-            </div>
-
-            <div class="form-group">
                 <label for="difficulty">Moeilijkheidsgraad</label>
                 <select id="difficulty" name="difficulty" required>
                     <option value="easy">Makkelijk (voor kinderen)</option>
@@ -345,7 +335,7 @@
             currentContext = {
                 name: document.getElementById('name').value,
                 gender: document.getElementById('gender').value,
-                theme: document.getElementById('theme').value,
+                theme: 'sinterklaas',
                 difficulty: document.getElementById('difficulty').value,
                 gift: document.getElementById('gift').value,
                 hobbies: document.getElementById('hobbies').value,
@@ -693,8 +683,8 @@
                 ]
             };
             
-            const theme = document.getElementById('theme').value;
-            const lines = examples[theme] || examples.sinterklaas;
+            const theme = 'sinterklaas';
+            const lines = examples[theme];
             displayPoem(lines);
             
             // Scroll naar het gedicht
