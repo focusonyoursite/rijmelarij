@@ -7,22 +7,22 @@ class PoemPDFGenerator:
     FONTS = {
         'homemade-apple': {
             'name': 'Homemade Apple',
-            'url': "https://github.com/google/fonts/raw/main/apache/homemadeapple/HomemadeApple-Regular.ttf",
+            'url': "https://fonts.gstatic.com/s/homemadeapple/v18/Qw3EZQFXECDrI2q789EKQZJob3x9.ttf",
             'filename': 'HomemadeApple-Regular.ttf'
         },
         'caveat': {
             'name': 'Caveat',
-            'url': "https://github.com/google/fonts/raw/main/ofl/caveat/Caveat-Regular.ttf",
+            'url': "https://fonts.gstatic.com/s/caveat/v17/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9SIc.ttf",
             'filename': 'Caveat-Regular.ttf'
         },
         'indie-flower': {
             'name': 'Indie Flower',
-            'url': "https://github.com/google/fonts/raw/main/ofl/indieflower/IndieFlower-Regular.ttf",
+            'url': "https://fonts.gstatic.com/s/indieflower/v17/m8JVjfNVeKWVnh3QMuKkFcZVaUuH.ttf",
             'filename': 'IndieFlower-Regular.ttf'
         },
         'dancing-script': {
             'name': 'Dancing Script',
-            'url': "https://github.com/google/fonts/raw/main/ofl/dancingscript/DancingScript-Regular.ttf",
+            'url': "https://fonts.gstatic.com/s/dancingscript/v24/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMSo3Sup5.ttf",
             'filename': 'DancingScript-Regular.ttf'
         }
     }
@@ -37,23 +37,34 @@ class PoemPDFGenerator:
         available_fonts = {}
         for font_id, font_info in self.FONTS.items():
             font_path = os.path.join(self.fonts_dir, font_info['filename'])
-            if not os.path.exists(font_path):
-                try:
-                    response = requests.get(font_info['url'])
+            try:
+                if not os.path.exists(font_path):
+                    print(f"Downloading font: {font_info['name']}")
+                    response = requests.get(font_info['url'], headers={'User-Agent': 'Mozilla/5.0'})
+                    response.raise_for_status()  # Raise an error for bad status codes
                     with open(font_path, 'wb') as f:
                         f.write(response.content)
-                    available_fonts[font_id] = {
-                        'name': font_info['name'],
-                        'path': font_path
-                    }
-                except Exception as e:
-                    print(f"Kon lettertype {font_info['name']} niet downloaden: {e}")
-                    continue
-            else:
-                available_fonts[font_id] = {
-                    'name': font_info['name'],
-                    'path': font_path
-                }
+                
+                # Verify the font file
+                with open(font_path, 'rb') as f:
+                    header = f.read(4)
+                    if header.startswith(b'\x00\x01\x00\x00') or header.startswith(b'true') or header.startswith(b'OTTO'):
+                        available_fonts[font_id] = {
+                            'name': font_info['name'],
+                            'path': font_path
+                        }
+                    else:
+                        print(f"Invalid font file for {font_info['name']}")
+                        if os.path.exists(font_path):
+                            os.remove(font_path)
+                        continue
+                        
+            except Exception as e:
+                print(f"Error with font {font_info['name']}: {str(e)}")
+                if os.path.exists(font_path):
+                    os.remove(font_path)
+                continue
+                
         return available_fonts
     
     def get_available_fonts(self):
@@ -76,13 +87,19 @@ class PoemPDFGenerator:
         pdf = FPDF(orientation='P', unit='mm', format='A5')
         pdf.add_page()
         
-        # Add the selected font
+        # Try to use the selected font, fall back to Arial if not available
+        font_family = "Arial"
         if font_id in self.available_fonts:
-            font_path = self.available_fonts[font_id]['path']
-            pdf.add_font("CustomFont", "", font_path, uni=True)
-            font_family = "CustomFont"
-        else:
-            font_family = "Helvetica"
+            try:
+                font_path = self.available_fonts[font_id]['path']
+                # Verify font file exists and is readable
+                if os.path.exists(font_path) and os.access(font_path, os.R_OK):
+                    pdf.add_font("CustomFont", "", font_path, uni=True)
+                    font_family = "CustomFont"
+                else:
+                    print(f"Font file not accessible: {font_id}")
+            except Exception as e:
+                print(f"Error loading font {font_id}: {str(e)}")
         
         # Set background color
         pdf.set_fill_color(252, 252, 250)
@@ -93,7 +110,7 @@ class PoemPDFGenerator:
         pdf.rect(margin, margin, 148 - 2*margin, 210 - 2*margin)
         
         # Add title
-        pdf.set_font(font_family, size=title_size)
+        pdf.set_font(font_family, size=int(title_size))
         pdf.set_text_color(139, 69, 19)
         pdf.cell(0, 20, "Sinterklaasgedicht", align='C', ln=True)
         
@@ -101,7 +118,7 @@ class PoemPDFGenerator:
         pdf.ln(15)
         
         # Add poem text
-        pdf.set_font(font_family, size=poem_size)
+        pdf.set_font(font_family, size=int(poem_size))
         pdf.set_text_color(0, 0, 0)
         
         # Calculate line spacing
