@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file, render_template
+from flask import Flask, request, jsonify, send_file, render_template, make_response
 from poem_generator import PoemGenerator
 from pdf_generator import PoemPDFGenerator
 import os
@@ -227,45 +227,6 @@ def save_poem():
             'error': str(e)
         })
 
-@app.route('/preview_pdf', methods=['POST'])
-def preview_pdf():
-    """Generate a preview PDF with current formatting"""
-    try:
-        data = request.get_json()
-        lines = data.get('lines', [])
-        formatting = data.get('formatting', {})
-        
-        if not lines:
-            return jsonify({
-                'success': False,
-                'error': 'Geen gedichtregels meegegeven'
-            })
-        
-        # Generate preview PDF
-        preview_dir = PREVIEWS_DIR
-        os.makedirs(preview_dir, exist_ok=True)
-        
-        # Use timestamp to ensure unique filename
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        preview_path = os.path.join(preview_dir, f'preview_{timestamp}.pdf')
-        
-        # Generate the PDF
-        pdf_generator.generate_pdf(lines, formatting, preview_path)
-        
-        # Return the PDF file directly
-        return send_file(
-            preview_path,
-            mimetype='application/pdf',
-            as_attachment=False,
-            download_name=f'preview_{timestamp}.pdf'
-        )
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
 @app.route('/download_pdf', methods=['POST'])
 def download_pdf():
     """Download the PDF version of the poem"""
@@ -284,12 +245,39 @@ def download_pdf():
         pdf_bytes = pdf_generator.generate_pdf_bytes(lines, formatting)
         
         # Return the PDF file directly
-        return send_file(
-            io.BytesIO(pdf_bytes),
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name='gedicht.pdf'
-        )
+        response = make_response(pdf_bytes)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = 'attachment; filename=sinterklaasgedicht.pdf'
+        return response
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/preview_pdf', methods=['POST'])
+def preview_pdf():
+    """Generate a preview PDF with current formatting"""
+    try:
+        data = request.get_json()
+        lines = data.get('lines', [])
+        formatting = data.get('formatting', {})
+        
+        if not lines:
+            return jsonify({
+                'success': False,
+                'error': 'Geen gedichtregels meegegeven'
+            })
+        
+        # Generate PDF in memory
+        pdf_bytes = pdf_generator.generate_pdf_bytes(lines, formatting)
+        
+        # Return the PDF file directly
+        response = make_response(pdf_bytes)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = 'inline'
+        return response
         
     except Exception as e:
         return jsonify({

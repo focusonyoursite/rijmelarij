@@ -161,7 +161,9 @@ class PoemPDFGenerator:
 
     def generate_pdf_bytes(self, lines, formatting=None):
         """Generate PDF in memory and return the bytes"""
+        # Create PDF with Unicode support
         pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
         
         # Apply formatting if provided
         if formatting:
@@ -227,8 +229,8 @@ class PoemPDFGenerator:
             
             # Move to centered position
             pdf.set_x(x_offset)
-            pdf.cell(line_width, line_height, line, align='C')
-            pdf.ln(line_height * 1.2)  # Add extra space between lines
+            pdf.multi_cell(line_width, line_height, line, align='C')
+            pdf.ln(line_height * 0.2)  # Add extra space between lines
         
         # Add space before footer
         pdf.ln(10)
@@ -238,5 +240,5 @@ class PoemPDFGenerator:
         pdf.set_text_color(139, 69, 19)
         pdf.cell(0, 10, "❦ Sint & Piet ❦", align='C', ln=True)
         
-        # Return PDF as bytes
-        return pdf.output(dest='S').encode('latin1')
+        # Return PDF bytes directly without encoding
+        return pdf.output(dest='S').encode('latin1', errors='replace')
