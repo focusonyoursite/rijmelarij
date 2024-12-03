@@ -280,51 +280,51 @@ class PoemGenerator:
         try:
             # Bepaal de stijl op basis van moeilijkheidsgraad
             style_guide = {
-                'easy': """
-                    - Gebruik eenvoudige woorden en korte zinnen
-                    - Vermijd moeilijke constructies
-                    - Maak het speels en vrolijk
-                    - Gebruik veel concrete voorbeelden
-                    - Houd het tempo vlot
-                """,
-                'medium': """
-                    - Gebruik gevarieerd taalgebruik
-                    - Mix eenvoudige en complexere zinnen
-                    - Voeg wat woordgrapjes toe
-                    - Gebruik beeldspraak waar passend
-                    - Zorg voor een goede afwisseling
-                """,
-                'hard': """
-                    - Gebruik rijke taal en complexere zinstructuren
-                    - Voeg subtiele humor en woordspelingen toe
-                    - Gebruik creatieve beeldspraak
-                    - Maak verrassende verbanden
-                    - Voeg diepere lagen toe aan het gedicht
-                """
+                'easy': (
+                    "- Gebruik eenvoudige woorden en korte zinnen\n"
+                    "- Vermijd moeilijke constructies\n"
+                    "- Maak het speels en vrolijk\n"
+                    "- Gebruik veel concrete voorbeelden\n"
+                    "- Houd het tempo vlot"
+                ),
+                'medium': (
+                    "- Gebruik gevarieerd taalgebruik\n"
+                    "- Mix eenvoudige en complexere zinnen\n"
+                    "- Voeg wat woordgrapjes toe\n"
+                    "- Gebruik beeldspraak waar passend\n"
+                    "- Zorg voor een goede afwisseling"
+                ),
+                'hard': (
+                    "- Gebruik rijke taal en complexere zinstructuren\n"
+                    "- Voeg subtiele humor en woordspelingen toe\n"
+                    "- Gebruik creatieve beeldspraak\n"
+                    "- Maak verrassende verbanden\n"
+                    "- Voeg diepere lagen toe aan het gedicht"
+                )
             }[difficulty]
 
             # Bepaal thema-specifieke elementen
             theme_elements = {
-                'sinterklaas': """
-                    - Verwijs naar Sinterklaas en zijn Pieten
-                    - Gebruik traditionele Sinterklaas-elementen
-                    - Verwijs naar pakjesavond en surprises
-                """,
-                'verjaardag': """
-                    - Focus op de feestelijke gelegenheid
-                    - Verwijs naar leeftijd en groei
-                    - Gebruik vrolijke, feestelijke taal
-                """,
-                'afscheid': """
-                    - Toon waardering voor de persoon
-                    - Verwijs naar gedeelde herinneringen
-                    - Eindig met goede wensen voor de toekomst
-                """,
-                'bedankt': """
-                    - Uit oprechte dankbaarheid
-                    - Verwijs naar specifieke acties of momenten
-                    - Maak het persoonlijk en warm
-                """
+                'sinterklaas': (
+                    "- Verwijs naar Sinterklaas en zijn Pieten\n"
+                    "- Gebruik traditionele Sinterklaas-elementen\n"
+                    "- Verwijs naar pakjesavond en surprises"
+                ),
+                'verjaardag': (
+                    "- Focus op de feestelijke gelegenheid\n"
+                    "- Verwijs naar leeftijd en groei\n"
+                    "- Gebruik vrolijke, feestelijke taal"
+                ),
+                'afscheid': (
+                    "- Toon waardering voor de persoon\n"
+                    "- Verwijs naar gedeelde herinneringen\n"
+                    "- Eindig met goede wensen voor de toekomst"
+                ),
+                'bedankt': (
+                    "- Uit oprechte dankbaarheid\n"
+                    "- Verwijs naar specifieke acties of momenten\n"
+                    "- Maak het persoonlijk en warm"
+                )
             }[theme]
 
             system_message = {
