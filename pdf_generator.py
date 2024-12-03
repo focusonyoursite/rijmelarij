@@ -240,5 +240,5 @@ class PoemPDFGenerator:
         pdf.set_text_color(139, 69, 19)
         pdf.cell(0, 10, "❦ Sint & Piet ❦", align='C', ln=True)
         
-        # Return PDF bytes directly without encoding
-        return pdf.output(dest='S').encode('latin1', errors='replace')
+        # Return PDF bytes directly
+        return bytes(pdf.output(dest='S'))
