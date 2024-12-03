@@ -164,47 +164,46 @@ class PoemGenerator:
 
     def generate_single_line(self, previous_line, context, target_words=None):
         """Genereer een enkele regel die rijmt op de vorige regel, met een specifiek aantal woorden"""
-        if not previous_line:
-            return self.generate_fallback_line(context)
-            
         try:
-            last_word = previous_line.split()[-1].strip('.,!?').lower()
-            rhyming_words = self.rijmwoorden.get_rhyming_words(last_word) if self.use_rhyme_check else []
-            
             system_message = {
                 "role": "system",
-                "content": """Je bent een ervaren Sinterklaasgedichtenschrijver.
-                Genereer één regel die rijmt op de vorige regel.
-                Gebruik een natuurlijke, vloeiende schrijfstijl."""
+                "content": """Je bent een Nederlandse dichter, gespecialiseerd in rijmende regels.
+                Genereer één enkele dichtregel in natuurlijk Nederlands die rijmt op de gegeven regel.
+                
+                Richtlijnen:
+                - Gebruik ALLEEN natuurlijk, idiomatisch Nederlands
+                - Vermijd letterlijke vertalingen uit het Engels
+                - Gebruik correcte Nederlandse zinsconstructies
+                - Zorg dat de regel natuurlijk aanvoelt
+                - Maak de regel persoonlijk en relevant voor de context"""
             }
-            
-            length_hint = ""
-            if target_words:
-                length_hint = f"\nDe regel moet ongeveer {target_words} woorden bevatten."
-            
-            rhyme_hint = ""
-            if rhyming_words:
-                rhyme_hint = f"\nMogelijke rijmwoorden: {', '.join(rhyming_words[:5])}"
-            
+
             user_message = {
                 "role": "user",
                 "content": f"""Schrijf één regel die rijmt op: "{previous_line}"
-                
-                Context:
+
+                Context over de persoon:
                 - Naam: {context['name']}
+                - {'Kind' if context['gender'] in ['jongen', 'meisje'] else 'Volwassene'}: {context['gender']}
                 - Cadeau: {context['gift']}
-                - Hobby's: {context['hobbies']}{length_hint}{rhyme_hint}
-                
+                - Hobby's: {context['hobbies']}
+
+                De nieuwe regel moet:
+                - Rijmen op de vorige regel
+                - Natuurlijk Nederlands zijn
+                - Passen bij de context
+                - {f'Ongeveer {target_words} woorden bevatten' if target_words else 'Een passende lengte hebben'}
+
                 Geef alleen de nieuwe regel terug, zonder extra tekst."""
             }
-            
+
             response = self.call_openai_with_retry(
                 messages=[system_message, user_message],
                 temperature=0.7,
                 max_tokens=50
             )
             
-            return response
+            return response.strip()
             
         except Exception as e:
             return self.generate_fallback_line(context)
@@ -230,19 +229,27 @@ class PoemGenerator:
         try:
             system_message = {
                 "role": "system",
-                "content": """Je bent een expert in het Nederlands.
-                Genereer alternatieve woorden die passen in de context.
-                De woorden moeten natuurlijk klinken en betekenisvol zijn."""
+                "content": """Je bent een expert in de Nederlandse taal.
+                Genereer alternatieve Nederlandse woorden die natuurlijk passen in de context.
+                
+                Richtlijnen:
+                - Kies ALLEEN natuurlijke Nederlandse woorden
+                - Let op dat de woorden in de zinsconstructie passen
+                - Vermijd letterlijke vertalingen uit het Engels
+                - Kies woorden die passen bij Sinterklaasgedichten
+                - Houd rekening met formeel/informeel taalgebruik"""
             }
             
             user_message = {
                 "role": "user",
-                "content": f"""Geef 5 alternatieve woorden voor "{word}" die passen in deze context: "{context}"
+                "content": f"""Geef 5 alternatieve Nederlandse woorden voor "{word}" die passen in deze context: "{context}"
                 
                 De woorden moeten:
-                1. Grammaticaal correct zijn op deze plek
-                2. Betekenisvol zijn in de context
-                3. Ongeveer dezelfde lengte hebben
+                1. Natuurlijk Nederlands zijn
+                2. Grammaticaal correct zijn op deze plek
+                3. Qua betekenis passen in de context
+                4. Ongeveer dezelfde lengte hebben
+                5. Passen bij de stijl van een Sinterklaasgedicht
                 
                 Geef alleen de woorden terug, gescheiden door komma's."""
             }
@@ -253,7 +260,7 @@ class PoemGenerator:
                 max_tokens=50
             )
             
-            alternatives = [w.strip() for w in response.choices[0].message.content.split(',')]
+            alternatives = [w.strip() for w in response.split(',')]
             return alternatives[:5]  # Maximaal 5 alternatieven
             
         except Exception as e:
@@ -266,48 +273,70 @@ class PoemGenerator:
         try:
             system_message = {
                 "role": "system",
-                "content": """Je bent een ervaren en originele Sinterklaasgedichtenschrijver.
-                Schrijf een origineel Sinterklaasgedicht dat persoonlijk en verrassend is.
-                Vermijd clichés zoals 'Sinterklaas zat te denken, wat hij X zou schenken'.
-                Begin met een originele, pakkende opening die past bij de context.
-                Gebruik humor en verrassende wendingen.
-                Het gedicht moet rijmen (bij voorkeur gepaard rijm: aabb)."""
+                "content": """Je bent een Nederlandse dichter, gespecialiseerd in het schrijven van Sinterklaasgedichten.
+                Gebruik ALLEEN natuurlijk, idiomatisch Nederlands - geen vertalingen uit het Engels.
+                
+                Belangrijke taalrichtlijnen:
+                - Gebruik Nederlandse zinsconstructies (NIET: 'Hij is aan het spelen games' maar 'Hij speelt graag spelletjes')
+                - Gebruik typisch Nederlandse uitdrukkingen en gezegden
+                - Vermijd letterlijke vertalingen uit het Engels
+                - Let op correcte werkwoordvolgorde in bijzinnen
+                - Gebruik natuurlijke Nederlandse woordvolgorde
+                
+                Stijlrichtlijnen:
+                - Maak het persoonlijk en origineel
+                - Gebruik humor die past bij Nederlandse Sinterklaasgedichten
+                - Vermijd clichés zoals 'Sinterklaas zat te denken, wat hij X zou schenken'
+                - Zorg voor een originele, pakkende opening die past bij de context
+                - Gebruik rijm (bij voorkeur gepaard rijm: aabb)"""
             }
 
-            # Voeg voorbeelden toe van goede openingen
-            examples = """Hier zijn voorbeelden van originele openingen:
-            - Een verhaal over de hobby's van de persoon
-            - Een grappige situatie met het cadeau
-            - Een verrassende observatie over de persoon
-            - Een actuele gebeurtenis die relevant is
-            - Een leuke anekdote over de persoon
+            # Voeg voorbeelden toe van goede Nederlandse stijl
+            examples = """Voorbeelden van goede Nederlandse stijl:
+
+            ✅ Goede Nederlandse constructies:
+            - "Als jij je fiets door weer en wind bestuurt,"
+            - "Met jouw gitaar maak jij de mooiste klanken,"
+            - "Terwijl de Pieten door de schoorsteen gleden,"
             
-            Vermijd standaard Sinterklaasgedicht-openingen."""
+            ❌ Vermijd Engels-achtige constructies:
+            - "Jij bent zo goed in spelen games" (Engels)
+            → "Je speelt zo graag computerspellen" (Nederlands)
+            
+            - "De Sint was watching jou dit jaar" (Engels)
+            → "De Sint hield jou dit jaar goed in de gaten" (Nederlands)
+            
+            Gebruik deze typisch Nederlandse wendingen:
+            - "Zoals je weet..."
+            - "Wat niemand nog verteld is..."
+            - "Het schijnt dat..."
+            - "Men zegt dat..."
+            - "Wie had dat nou gedacht...""""
 
             user_message = {
                 "role": "user",
-                "content": f"""Schrijf een origineel Sinterklaasgedicht voor deze persoon:
+                "content": f"""Schrijf een origineel Sinterklaasgedicht in natuurlijk Nederlands voor deze persoon:
                 
-                Context:
+                Persoon:
                 - Naam: {context['name']}
-                - Gender: {context['gender']}
+                - {'Kind' if is_child else 'Volwassene'}: {context['gender']}
                 - Cadeau: {context['gift']}
                 - Hobby's: {context['hobbies']}
-                - Is het een surprise?: {'ja' if context['is_surprise'] else 'nee'}
+                - Surprise: {'ja' if context['is_surprise'] else 'nee'}
                 
                 {examples}
                 
                 Het gedicht moet:
                 - Persoonlijk zijn en de context gebruiken
                 - 6-8 regels lang zijn
-                - {'Kindvriendelijk zijn' if is_child else 'Geschikt zijn voor een volwassene'}
-                - Rijmen (bij voorkeur gepaard rijm: aabb)
-                - Een originele opening hebben
-                - Humor bevatten
+                - Rijmen (aabb)
+                - Natuurlijk Nederlands gebruiken
+                - Een verrassende opening hebben
+                - Humor bevatten die past bij een {'kind' if is_child else 'volwassene'}
                 
-                Geef alleen het gedicht terug, zonder extra tekst."""
+                Begin direct met het gedicht, zonder inleiding."""
             }
-
+            
             response = self.call_openai_with_retry(
                 messages=[system_message, user_message],
                 temperature=0.8,
