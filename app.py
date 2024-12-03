@@ -227,38 +227,6 @@ def save_poem():
             'error': str(e)
         })
 
-@app.route('/download_pdf/<filename>')
-def download_pdf(filename):
-    """Endpoint voor het downloaden van een PDF gedicht"""
-    try:
-        pdf_dir = PDFS_DIR
-        return send_file(
-            os.path.join(pdf_dir, filename),
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=filename
-        )
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
-@app.route('/get_fonts', methods=['GET'])
-def get_fonts():
-    """Get list of available handwritten fonts"""
-    try:
-        fonts = pdf_generator.get_available_fonts()
-        return jsonify({
-            'success': True,
-            'fonts': fonts
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
 @app.route('/preview_pdf', methods=['POST'])
 def preview_pdf():
     """Generate a preview PDF with current formatting"""
@@ -281,12 +249,16 @@ def preview_pdf():
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         preview_path = os.path.join(preview_dir, f'preview_{timestamp}.pdf')
         
+        # Generate the PDF
         pdf_generator.generate_pdf(lines, formatting, preview_path)
         
-        return jsonify({
-            'success': True,
-            'preview_path': os.path.basename(preview_path)
-        })
+        # Return the PDF file directly
+        return send_file(
+            preview_path,
+            mimetype='application/pdf',
+            as_attachment=False,
+            download_name=f'preview_{timestamp}.pdf'
+        )
         
     except Exception as e:
         return jsonify({
@@ -294,21 +266,51 @@ def preview_pdf():
             'error': str(e)
         })
 
-@app.route('/preview_pdf_v2', methods=['POST'])
-def preview_pdf_v2():
-    data = request.get_json()
-    lines = data.get('lines')
-    
+@app.route('/download_pdf', methods=['POST'])
+def download_pdf():
+    """Download the PDF version of the poem"""
     try:
-        pdf_bytes = pdf_generator.generate_pdf(lines)
+        data = request.get_json()
+        lines = data.get('lines', [])
+        formatting = data.get('formatting', {})
+        
+        if not lines:
+            return jsonify({
+                'success': False,
+                'error': 'Geen gedichtregels meegegeven'
+            })
+        
+        # Generate PDF in memory
+        pdf_bytes = pdf_generator.generate_pdf_bytes(lines, formatting)
+        
+        # Return the PDF file directly
         return send_file(
             io.BytesIO(pdf_bytes),
             mimetype='application/pdf',
-            as_attachment=False,
-            download_name='preview.pdf'
+            as_attachment=True,
+            download_name='gedicht.pdf'
         )
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/get_fonts', methods=['GET'])
+def get_fonts():
+    """Get list of available handwritten fonts"""
+    try:
+        fonts = pdf_generator.get_available_fonts()
+        return jsonify({
+            'success': True,
+            'fonts': fonts
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
 
 @app.route('/preview/<filename>')
 def get_preview(filename):

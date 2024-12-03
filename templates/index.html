@@ -144,13 +144,14 @@
             background-color: #1976D2;
         }
         .formatting-panel {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin: 20px auto;
-            max-width: 800px;
             display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 8px;
+        }
+        .formatting-panel.visible {
+            display: block;
         }
         .formatting-controls {
             display: grid;
@@ -366,7 +367,7 @@
                     await displayPoem(data.poem);
                     saveButton.style.display = 'block';
                     // Show formatting panel and generate initial preview
-                    document.getElementById('formatting-panel').style.display = 'block';
+                    document.getElementById('formatting-panel').classList.add('visible');
                     updatePreview();
                 } else {
                     error.textContent = data.error;
@@ -493,33 +494,36 @@
         }
 
         async function displayPoem(lines) {
-            const poemContainer = document.getElementById('poem-container');
-            poemContainer.innerHTML = '<h2>Je Sinterklaasgedicht:</h2>';
-            
-            for (let i = 0; i < lines.length; i++) {
+            const container = document.getElementById('poem-container');
+            container.innerHTML = '';
+
+            lines.forEach((line, index) => {
                 const lineDiv = document.createElement('div');
                 lineDiv.className = 'poem-line';
                 
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'line-content';
-                displayLineContent(contentDiv, lines[i]);
+                const lineContent = document.createElement('div');
+                lineContent.className = 'line-content';
+                displayLineContent(lineContent, line);
                 
-                const regenerateBtn = document.createElement('button');
-                regenerateBtn.className = 'regenerate-btn';
-                regenerateBtn.textContent = '↻';
-                regenerateBtn.title = 'Regel opnieuw genereren';
-                regenerateBtn.onclick = () => regenerateLine(lineDiv, i);
+                const regenerateButton = document.createElement('button');
+                regenerateButton.className = 'regenerate-btn';
+                regenerateButton.textContent = '↻';
+                regenerateButton.onclick = () => regenerateLine(lineDiv, index);
                 
-                lineDiv.appendChild(contentDiv);
-                lineDiv.appendChild(regenerateBtn);
-                poemContainer.appendChild(lineDiv);
-            }
+                lineDiv.appendChild(lineContent);
+                lineDiv.appendChild(regenerateButton);
+                container.appendChild(lineDiv);
+            });
+
+            // Show formatting panel when poem is displayed
+            document.getElementById('formatting-panel').classList.add('visible');
+            // Load fonts if not already loaded
+            loadFonts();
         }
 
         async function savePoem() {
-            const poemContainer = document.getElementById('poem-container');
-            const lines = Array.from(poemContainer.getElementsByClassName('poem-line'))
-                .map(lineDiv => lineDiv.querySelector('.line-content').textContent.trim());
+            const lines = Array.from(document.querySelectorAll('.poem-line'))
+                .map(div => div.querySelector('.line-content').textContent.trim());
             
             const name = document.getElementById('name').value.trim();
             if (!name) {
@@ -555,9 +559,41 @@
         }
 
         function downloadPDF() {
-            if (currentPDFPath) {
-                window.location.href = `/download_pdf/${currentPDFPath}`;
-            }
+            const lines = Array.from(document.querySelectorAll('.poem-line'))
+                .map(div => div.querySelector('.line-content').textContent.trim());
+            
+            const formatting = getFormatting();
+            
+            fetch('/download_pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lines: lines,
+                    formatting: formatting
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('Network response was not ok');
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'gedicht.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('error').textContent = 'Er ging iets mis bij het downloaden van de PDF.';
+            });
         }
         
         async function loadFonts() {
@@ -592,44 +628,48 @@
         }
         
         async function updatePreview() {
-            // Clear existing timer
-            if (previewDebounceTimer) {
-                clearTimeout(previewDebounceTimer);
-            }
+            // Only update if there's a poem displayed
+            const lines = Array.from(document.querySelectorAll('.poem-line'))
+                .map(div => div.querySelector('.line-content').textContent.trim());
             
-            // Set new timer to debounce preview updates
-            previewDebounceTimer = setTimeout(async () => {
-                const poemContainer = document.getElementById('poem-container');
-                const lines = Array.from(poemContainer.getElementsByClassName('poem-line'))
-                    .map(lineDiv => lineDiv.querySelector('.line-content').textContent.trim());
-                
-                if (lines.length === 0) return;
-                
-                try {
-                    const response = await fetch('/preview_pdf', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            lines: lines,
-                            formatting: getFormatting()
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        currentPreviewPath = data.preview_path;
-                        const previewFrame = document.getElementById('pdf-preview');
-                        previewFrame.src = `/preview/${currentPreviewPath}`;
-                    }
-                } catch (e) {
-                    console.error('Kon preview niet genereren:', e);
-                }
-            }, 500); // Wait 500ms after last change before updating
+            if (lines.length > 0) {
+                previewPDF();
+            }
         }
         
+        async function previewPDF() {
+            const lines = Array.from(document.querySelectorAll('.poem-line'))
+                .map(div => div.querySelector('.line-content').textContent.trim());
+            
+            const formatting = getFormatting();
+            
+            fetch('/preview_pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lines: lines,
+                    formatting: formatting
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('Network response was not ok');
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                document.getElementById('pdf-iframe').src = url;
+                document.getElementById('pdf-preview').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('error').textContent = 'Er ging iets mis bij het genereren van de PDF preview.';
+            });
+        }
+
         // Nieuwe functie voor het tonen van een voorbeeldgedicht
         function showExample() {
             const examples = {
@@ -754,26 +794,6 @@
                     }
                 });
             });
-        }
-
-        function previewPDF() {
-            fetch('/preview_pdf', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    lines: Array.from(document.querySelectorAll('.poem-line'))
-                        .map(div => div.querySelector('.line-content').textContent.trim())
-                })
-            })
-            .then(response => response.blob())
-            .then(blob => {
-                const pdfUrl = URL.createObjectURL(blob);
-                document.getElementById('pdf-iframe').src = pdfUrl;
-                document.getElementById('pdf-preview').style.display = 'block';
-            })
-            .catch(error => console.error('Error:', error));
         }
     </script>
 </body>

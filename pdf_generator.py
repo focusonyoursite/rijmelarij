@@ -158,3 +158,38 @@ class PoemPDFGenerator:
         # Save the PDF
         pdf.output(output_path)
         return output_path
+
+    def generate_pdf_bytes(self, lines, formatting=None):
+        """Generate PDF in memory and return the bytes"""
+        pdf = FPDF()
+        
+        # Apply formatting if provided
+        if formatting:
+            font = formatting.get('font', 'Arial')
+            title_size = int(formatting.get('title_size', 16))
+            poem_size = int(formatting.get('poem_size', 12))
+        else:
+            font = 'Arial'
+            title_size = 16
+            poem_size = 12
+        
+        # Add a page
+        pdf.add_page()
+        
+        # Set font for title
+        pdf.set_font(font, size=title_size)
+        
+        # Add title
+        pdf.cell(0, 10, 'Sinterklaasgedicht', ln=True, align='C')
+        pdf.ln(10)
+        
+        # Set font for poem
+        pdf.set_font(font, size=poem_size)
+        
+        # Add poem lines
+        for line in lines:
+            pdf.cell(0, 10, line, ln=True)
+            pdf.ln(5)
+        
+        # Return PDF as bytes
+        return pdf.output(dest='S').encode('latin1')
