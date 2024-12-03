@@ -1,29 +1,50 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, render_template
 from poem_generator import PoemGenerator
 from pdf_generator import PoemPDFGenerator
 import os
 import datetime
 import re
 import json
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 generator = PoemGenerator()
 pdf_generator = PoemPDFGenerator()
 
+# For Vercel deployment - use /tmp for file storage
+STORAGE_DIR = '/tmp' if os.environ.get('VERCEL') else os.path.dirname(__file__)
+
+# Update paths to use STORAGE_DIR
+VERSION_FILE = os.path.join(STORAGE_DIR, 'poem_versions.json')
+POEMS_DIR = os.path.join(STORAGE_DIR, 'poems')
+PDFS_DIR = os.path.join(STORAGE_DIR, 'pdfs')
+PREVIEWS_DIR = os.path.join(STORAGE_DIR, 'previews')
+FONTS_DIR = os.path.join(STORAGE_DIR, 'fonts')
+
+# Create necessary directories
+for directory in [POEMS_DIR, PDFS_DIR, PREVIEWS_DIR, FONTS_DIR]:
+    os.makedirs(directory, exist_ok=True)
+
 # Dictionary to store version numbers
-VERSION_FILE = os.path.join(os.path.dirname(__file__), 'poem_versions.json')
 
 def load_versions():
     """Load version numbers from file"""
     if os.path.exists(VERSION_FILE):
-        with open(VERSION_FILE, 'r') as f:
-            return json.load(f)
+        try:
+            with open(VERSION_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
     return {}
 
 def save_versions(versions):
     """Save version numbers to file"""
-    with open(VERSION_FILE, 'w') as f:
-        json.dump(versions, f)
+    try:
+        with open(VERSION_FILE, 'w') as f:
+            json.dump(versions, f)
+    except:
+        pass  # Fail silently on Vercel due to read-only filesystem
 
 def get_next_version(name):
     """Get next version number for a given name"""
@@ -161,19 +182,13 @@ def save_poem():
         safe_name = sanitize_filename(name)
         filename = f'{safe_name}_Gedicht_{version}'
         
-        # Create directories if they don't exist
-        poems_dir = os.path.join(os.path.dirname(__file__), 'poems')
-        pdfs_dir = os.path.join(os.path.dirname(__file__), 'pdfs')
-        os.makedirs(poems_dir, exist_ok=True)
-        os.makedirs(pdfs_dir, exist_ok=True)
-        
         # Save text version
-        txt_filepath = os.path.join(poems_dir, f'{filename}.txt')
+        txt_filepath = os.path.join(POEMS_DIR, f'{filename}.txt')
         with open(txt_filepath, 'w', encoding='utf-8') as f:
             f.write('\n'.join(lines))
         
         # Generate PDF version
-        pdf_filepath = os.path.join(pdfs_dir, f'{filename}.pdf')
+        pdf_filepath = os.path.join(PDFS_DIR, f'{filename}.pdf')
         pdf_generator.generate_pdf(lines, formatting, pdf_filepath)
         
         return jsonify({
@@ -192,7 +207,7 @@ def save_poem():
 def download_pdf(filename):
     """Endpoint voor het downloaden van een PDF gedicht"""
     try:
-        pdf_dir = os.path.join(os.path.dirname(__file__), 'pdfs')
+        pdf_dir = PDFS_DIR
         return send_file(
             os.path.join(pdf_dir, filename),
             mimetype='application/pdf',
@@ -235,7 +250,7 @@ def preview_pdf():
             })
         
         # Generate preview PDF
-        preview_dir = os.path.join(os.path.dirname(__file__), 'previews')
+        preview_dir = PREVIEWS_DIR
         os.makedirs(preview_dir, exist_ok=True)
         
         # Use timestamp to ensure unique filename
@@ -259,7 +274,7 @@ def preview_pdf():
 def get_preview(filename):
     """Serve preview PDF file"""
     try:
-        preview_dir = os.path.join(os.path.dirname(__file__), 'previews')
+        preview_dir = PREVIEWS_DIR
         return send_file(
             os.path.join(preview_dir, filename),
             mimetype='application/pdf'
@@ -271,4 +286,5 @@ def get_preview(filename):
         })
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.debug = False
+    app.run(port=5001)

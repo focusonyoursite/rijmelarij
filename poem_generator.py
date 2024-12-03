@@ -1,16 +1,18 @@
 import os
 from dotenv import load_dotenv
-from openai import OpenAI
+import openai
 import random
 import time
-from openai import RateLimitError
 from sint_scraper import SinterklaasGedichtenScraper
 
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client and Sint scraper
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+# Initialize OpenAI client
+openai.api_key = os.getenv('OPENAI_API_KEY')
+client = openai
+
+# Initialize Sint scraper
 sint_scraper = SinterklaasGedichtenScraper()
 
 class PoemGenerator:
@@ -61,14 +63,14 @@ class PoemGenerator:
         """Probeer OpenAI API aan te roepen met retry logic"""
         for attempt in range(max_retries):
             try:
-                response = client.chat.completions.create(
+                response = client.ChatCompletion.create(
                     model="gpt-4-1106-preview",
                     messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens
                 )
-                return response
-            except RateLimitError:
+                return response.choices[0].message.content
+            except openai.error.RateLimitError:
                 if attempt < max_retries - 1:
                     wait_time = (attempt + 1) * 20  # Exponential backoff
                     print(f"\nEven wachten vanwege API limiet ({wait_time} seconden)...")
@@ -202,7 +204,7 @@ class PoemGenerator:
                 max_tokens=50
             )
             
-            return response.choices[0].message.content.strip()
+            return response
             
         except Exception as e:
             return self.generate_fallback_line(context)

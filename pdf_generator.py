@@ -28,7 +28,7 @@ class PoemPDFGenerator:
     }
 
     def __init__(self):
-        self.fonts_dir = os.path.join(os.path.dirname(__file__), 'fonts')
+        self.fonts_dir = os.path.join('/tmp' if os.environ.get('VERCEL') else os.path.dirname(__file__), 'fonts')
         os.makedirs(self.fonts_dir, exist_ok=True)
         self.available_fonts = self.setup_fonts()
     
