@@ -165,31 +165,78 @@ class PoemPDFGenerator:
         
         # Apply formatting if provided
         if formatting:
-            font = formatting.get('font', 'Arial')
+            font_family = formatting.get('font', 'Arial')
             title_size = int(formatting.get('title_size', 16))
             poem_size = int(formatting.get('poem_size', 12))
+            line_spacing = float(formatting.get('line_spacing', 1.5))
         else:
-            font = 'Arial'
+            font_family = 'Arial'
             title_size = 16
             poem_size = 12
+            line_spacing = 1.5
         
-        # Add a page
-        pdf.add_page()
+        # Add a page (A5 format)
+        pdf.add_page(format='A5')
         
-        # Set font for title
-        pdf.set_font(font, size=title_size)
+        # Set margins (2mm)
+        margin = 2
+        pdf.set_margins(margin, margin)
+        
+        # Add font if it's one of our custom fonts
+        if font_family in self.FONTS:
+            font_path = os.path.join(self.fonts_dir, self.FONTS[font_family]['filename'])
+            try:
+                pdf.add_font(font_family, '', font_path, uni=True)
+            except Exception as e:
+                print(f"Error loading font {font_family}: {str(e)}")
+                font_family = 'Arial'
+        
+        # Set background color
+        pdf.set_fill_color(252, 252, 250)
+        pdf.rect(0, 0, 148, 210, 'F')
+        
+        # Add decorative border
+        pdf.set_draw_color(139, 69, 19)
+        pdf.rect(margin, margin, 148 - 2*margin, 210 - 2*margin)
         
         # Add title
-        pdf.cell(0, 10, 'Sinterklaasgedicht', ln=True, align='C')
+        pdf.set_font(font_family, size=int(title_size))
+        pdf.set_text_color(139, 69, 19)
+        pdf.cell(0, 20, "Sinterklaasgedicht", align='C', ln=True)
+        
+        # Add space before poem
+        pdf.ln(15)
+        
+        # Add poem text
+        pdf.set_font(font_family, size=int(poem_size))
+        pdf.set_text_color(0, 0, 0)
+        
+        # Calculate line spacing
+        available_height = 130
+        num_lines = len(lines)
+        base_line_height = poem_size * 0.5  # Convert font size to mm
+        line_height = base_line_height * line_spacing
+        
+        # Calculate effective width for poem text (accounting for margins)
+        effective_width = 148 - 2*margin
+        
+        for line in lines:
+            # Get width of text to calculate x position for centering
+            line_width = pdf.get_string_width(line)
+            x_offset = (effective_width - line_width) / 2 + margin
+            
+            # Move to centered position
+            pdf.set_x(x_offset)
+            pdf.cell(line_width, line_height, line, align='C')
+            pdf.ln(line_height * 1.2)  # Add extra space between lines
+        
+        # Add space before footer
         pdf.ln(10)
         
-        # Set font for poem
-        pdf.set_font(font, size=poem_size)
-        
-        # Add poem lines
-        for line in lines:
-            pdf.cell(0, 10, line, ln=True)
-            pdf.ln(5)
+        # Add footer
+        pdf.set_font(font_family, size=8)
+        pdf.set_text_color(139, 69, 19)
+        pdf.cell(0, 10, "❦ Sint & Piet ❦", align='C', ln=True)
         
         # Return PDF as bytes
         return pdf.output(dest='S').encode('latin1')

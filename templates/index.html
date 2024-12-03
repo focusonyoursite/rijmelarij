@@ -565,16 +565,19 @@
                 })
             })
             .then(response => {
-                if (response.ok) {
-                    return response.blob();
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Er ging iets mis bij het downloaden van de PDF.');
+                    });
                 }
-                throw new Error('Network response was not ok');
+                return response.blob();
             })
             .then(blob => {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
+                a.style.display = 'none';
                 a.href = url;
-                a.download = 'gedicht.pdf';
+                a.download = 'sinterklaasgedicht.pdf';
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
@@ -582,10 +585,50 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.getElementById('error').textContent = 'Er ging iets mis bij het downloaden van de PDF.';
+                document.getElementById('error').textContent = error.message;
             });
         }
-        
+
+        function previewPDF() {
+            const lines = Array.from(document.querySelectorAll('.poem-line'))
+                .map(div => div.querySelector('.line-content').textContent.trim());
+            
+            const formatting = getFormatting();
+            
+            fetch('/preview_pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lines: lines,
+                    formatting: formatting
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Er ging iets mis bij het genereren van de PDF preview.');
+                    });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                document.getElementById('pdf-iframe').src = url;
+                document.getElementById('pdf-preview').style.display = 'block';
+                
+                // Clean up the URL after the iframe has loaded
+                document.getElementById('pdf-iframe').onload = () => {
+                    window.URL.revokeObjectURL(url);
+                };
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('error').textContent = error.message;
+            });
+        }
+
         async function loadFonts() {
             try {
                 const response = await fetch('/get_fonts');
@@ -627,39 +670,6 @@
             }
         }
         
-        async function previewPDF() {
-            const lines = Array.from(document.querySelectorAll('.poem-line'))
-                .map(div => div.querySelector('.line-content').textContent.trim());
-            
-            const formatting = getFormatting();
-            
-            fetch('/preview_pdf', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    lines: lines,
-                    formatting: formatting
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.blob();
-                }
-                throw new Error('Network response was not ok');
-            })
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                document.getElementById('pdf-iframe').src = url;
-                document.getElementById('pdf-preview').style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('error').textContent = 'Er ging iets mis bij het genereren van de PDF preview.';
-            });
-        }
-
         // Nieuwe functie voor het tonen van een voorbeeldgedicht
         function showExample() {
             const examples = {
